@@ -1,15 +1,6 @@
 <?php
 include_once('func_shortcode.php');
 
-function nextpay_Vip_GET_CURL($addres)
-{
-	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, $addres);
-	curl_setopt($ch, CURLOPT_POST, false);
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-	$nnn = curl_exec($ch);
-	return $nnn;
-}
 
 add_action('admin_enqueue_scripts', 'my_style_nextpay');
 function my_style_nextpay() {
@@ -204,8 +195,8 @@ EOT;
 		add_option("email_message_nofile", $message_default_nofile, '','yes');
 		add_option("expire_links_after", 7, '','yes');
 		
-		add_option("paypal_direct", 0, '','yes');
-		add_option("paypal_return_url", get_option("siteurl"), '','yes');
+		add_option("nextpay_direct", 0, '','yes');
+		add_option("nextpay_return_url", get_option("siteurl"), '','yes');
 		$table_name = $wpdb->prefix . "pfd_products";
 		if($wpdb->get_var("show tables like '$table_name'") != $table_name) {
 			$sql = "CREATE TABLE " . $table_name . " (
@@ -318,20 +309,19 @@ EOT;
 		register_setting('pfd_options', 'email_message_nofile');
 		register_setting('pfd_options', 'expire_links_after', 'intval');
 		
-		register_setting('pfd_options', 'paypal_direct', 'intval');
-		register_setting('pfd_options', 'paypal_return_url');
+		register_setting('pfd_options', 'nextpay_direct', 'intval');
+		register_setting('pfd_options', 'nextpay_return_url');
 		register_setting('pfd_options', 'pfd_currency', array(__CLASS__, 'validate_currency'));
 	}
 	public static function admin_menu() {
-		add_menu_page( "فروشگاه", "فروشگاه", 'manage_options', 'nextpay-file-download', array(__CLASS__, 'admin_dashboard'),plugins_url("images/basket.png",__FILE__));
-		add_submenu_page( 'nextpay-file-download', "محصولات", "محصولات", 'manage_options', "nextpay-file-download-products", array(__CLASS__, 'admin_products_router'));
-		add_submenu_page( 'nextpay-file-download', "تنظیمات", "تنظيمات", 'manage_options', "paypal-file-download-settings", array(__CLASS__, 'admin_settings'));
-		add_submenu_page( 'nextpay-file-download', "فروش ها", "فروش ها", 'manage_options', "paypal-file-download-transactions", array(__CLASS__,'admin_transactions'));
-		add_menu_page( "اشتراک VIP", "اشتراک VIP", 'manage_options', 'nextpay-vip', array(__CLASS__, 'admin_dashboard'), plugins_url("images/vip.png",__FILE__));
-		add_submenu_page( 'nextpay-vip', "اشتراک ها", "اشتراک ها", 'manage_options', "nextpay-vip-accounts", array(__CLASS__, 'admin_vip_router'));
-		
-		add_submenu_page( 'nextpay-vip', "تنظیمات", "تنظيمات", 'manage_options', "nextpay-vip-settings", array(__CLASS__, 'admin_settingsvip'));
-		add_submenu_page( 'nextpay-vip', "کاربران VIP", "کاربران VIP", 'manage_options', "nextpay-vip-orders", array(__CLASS__,'admin_orders'));
+		add_menu_page( "", "محصولات فروشگاه", 'manage_options', 'nextpay-file-download-products', array(__CLASS__, 'admin_products_router'),plugins_url("images/basket.png",__FILE__));
+		add_submenu_page( 'nextpay-file-download-products', "فروش ها", "فروش ها", 'manage_options', "nextpay-file-download-transactions", array(__CLASS__,'admin_transactions'));
+		add_submenu_page( 'nextpay-file-download-products', "تنظیمات", "تنظيمات", 'manage_options', "nextpay-file-download-settings", array(__CLASS__, 'admin_settings'));
+		add_submenu_page( 'nextpay-file-download-products', "راهنما", "راهنما", 'manage_options', "nextpay-file-download-help", array(__CLASS__, 'admin_help'));
+
+		add_menu_page( "", "اشتراک VIP", 'manage_options', 'nextpay-vip-accounts', array(__CLASS__, 'admin_vip_router'), plugins_url("images/vip.png",__FILE__));
+		add_submenu_page( 'nextpay-vip-accounts', "تنظیمات", "تنظيمات", 'manage_options', "nextpay-vip-settings", array(__CLASS__, 'admin_settingsvip'));
+		add_submenu_page( 'nextpay-vip-accounts', "کاربران VIP", "کاربران VIP", 'manage_options', "nextpay-vip-orders", array(__CLASS__,'admin_orders'));
 		
 		
 	}
@@ -409,15 +399,32 @@ EOT;
 		window.location="'.get_option('siteurl').'/wp-admin/admin.php?page=nextpay-file-download-products"';
 		echo '//--></script>';
 	}
-    public static function admin_dashboard() {
-	global $wpdb;
-	/*$image_vip = plugins_url( 'images/vip.png' , __FILE__ );
-	$image_vipdata = plugins_url( 'images/vipdata.png' , __FILE__ );*/	
-	
-	$contentpage=nextpay_Vip_GET_CURL('http://mehr-rayan.ir/_dashboard_/dashboardpage.php?plugin=shopvip1');
-	
-	echo $contentpage;
-	
+    public static function admin_help() {
+	echo '
+	<div class="wrap">
+            <p style="text-align:right;font-size:12px;">
+            	<h2>راهنمایی استفاده</h2>
+            <br>
+            <code>[form_buy_vip descript=true]</code> : برای نمایش فرم خرید اشتراک و نمایش آخرین وضعیت اشتراک کاربر از این شورتکد در محتوای برگه ای خاص استفاده کنید.
+            <br>
+            
+            <code>[form_buy_vip descript=false]</code> : عملکرد این شورتکد مانند مورد قبلی است ولی توضیحات مربوط به اشتراک ها را نمایش نمی دهد. (مناسب برای ساید بار)
+            <br>
+            
+            <code>[vip_data]HELP[/vip_data]</code> : محتوایی را که می خواهید فقط به کاربران vip خود نمایش دهید در داخل این شورتکد قرار دهید. در این مثال کلمه HELP فقط به کاربران VIP نمایش داده می شود.
+            <br>
+            <code>[vip_linkdownload idproduct=1]</code> : با استفاده از این شورت کد می توانید محصولات فروشگاه را برای استفاده کاربران vip قرار دهید. در این مثال عدد 1 بیانکر شماره اختصاصی محصول می باشد.
+            مقدار idproduct باید شماره اختصاصی آن محصول در صفحه محصولات فروشگاه باشد.
+            
+            <li>در صفحه افزودن نوشته و افزودن برگه شورتکد های مورد نیاز روی ادیتور وردپرس نمایش داده شده اند</li>
+            
+            <li>برای استفاده شورتکد ها در سایدبار از افزونه Shortcode Widget استفاده کنید</li>
+            
+            </p>
+       
+       </div>
+	';
+
     }
 	protected static function admin_products() {
 		if (!current_user_can('manage_options'))  {
@@ -550,7 +557,7 @@ EOT;
 	
 	echo '<div class="wrap">
 		<h2>تنظیمات</h2>
-        <h3 style="color:#f00;">API درگاه nextpay را در تنظیمات بخش VIP تنظیم نمایید</h3>';
+        <h3 style="color:#f00;">کلید مجوزدهی نکست  پی (Api Key) را از <a href="'.get_option('siteurl').'/wp-admin/admin.php?page=nextpay-vip-settings">اینجا</a> وارد نمایید</h3>';
 		
 		if (isset($_GET['settings-updated'])) {
 			echo '<div id="message" class="updated"><p>تنظيمات به روز شد!</p></div>';
@@ -567,12 +574,12 @@ EOT;
 				</tr>';
             echo '<tr valign="top">
 					<th scope="row">مستقیم کردن لینک</th>
-					<td><input type="text" name="paypal_direct" style="width:150px;" value="'.get_option('paypal_direct').'" /> روز (1 به معنای فعال)<br />فعال کردن اين قسمت باعث مي شود لينک هاي شما پس از پرداخت بصورت مستقیم نمایش داده شوند</td>
+					<td><input type="text" name="nextpay_direct" style="width:150px;" value="'.get_option('nextpay_direct').'" /> روز (1 به معنای فعال)<br />فعال کردن اين قسمت باعث مي شود لينک هاي شما پس از پرداخت بصورت مستقیم نمایش داده شوند</td>
 				</tr>';
 				
 				echo '<tr valign="top">
 					<th scope="row">آدرس بازگشتي</th>
-					<td><input type="text" name="paypal_return_url" style="width:250px;" value="'.get_option('paypal_return_url').'" /><br />لينک بازگشت به سايت شما پس از انجام تراکنش در درگاه nextpay.ir</td>
+					<td><input type="text" name="nextpay_return_url" style="width:250px;" value="'.get_option('nextpay_return_url').'" /><br />لينک بازگشت به سايت شما پس از انجام تراکنش در درگاه nextpay.ir</td>
 				</tr>';
 				echo '<tr valign="top">
 					<th scope="row">اطلاع رساني</th>
@@ -683,7 +690,7 @@ EOT;
 	}
 	public static function media_button($context){
 		$image_url = plugins_url( 'images/basket.png' , __FILE__ );
-		$more = '<a href="#TB_inline?width=350&inlineId=paypal_file_download_form" class="thickbox" title="قرارد دادن لينک پرداخت nextpay"><img src="' . $image_url . '" alt="قرارد دادن لينک پرداخت nextpay" /></a>';
+		$more = '<a href="#TB_inline?width=350&inlineId=nextpay_file_download_form" class="thickbox" title="قرارد دادن لينک پرداخت nextpay"><img src="' . $image_url . '" alt="قرارد دادن لينک پرداخت nextpay" /></a>';
 		return $context . $more;
 	}
 	public static function vip_media_button($context){
@@ -751,7 +758,7 @@ EOT;
 			wdw.send_to_editor(construct);
 		}
 	</script>";
-	echo '<div id="paypal_file_download_form" style="display:none;">
+	echo '<div id="nextpay_file_download_form" style="display:none;">
 		<div class="wrap" style="text-align:right;direction:rtl;">
 			<div>	
 				<div style="padding:15px 15px 0 15px;">
@@ -769,7 +776,7 @@ EOT;
 									$products = $wpdb->get_results( "SELECT * FROM $table_name ORDER BY id ASC;" ,ARRAY_A);
 									if (count($products) == 0)
 									{
-										echo 'محصولي وجود ندارد. <a href="'.get_option('siteurl').'/wp-admin/admin.php?page=paypal-file-download-products">نوشته خود را ذخيره کنيد و سپس اينجا کليک نماييد.</a>';
+										echo 'محصولي وجود ندارد. <a href="'.get_option('siteurl').'/wp-admin/admin.php?page=nextpay-file-download-products">نوشته خود را ذخيره کنيد و سپس اينجا کليک نماييد.</a>';
 									
 									} 
 									else 
@@ -814,7 +821,7 @@ EOT;
             // find with order id
             global $wpdb;
             $table_name = $wpdb->prefix . "pfd_orders";
-            $order = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE order_code = $order_id AND fulfilled = 0",$_POST["trans_id"]) , ARRAY_A, 0);
+            $order = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE order_code = '%s' AND fulfilled = 0",$order_id) , ARRAY_A, 0);
             if(!$order){
                 exit();
             }
@@ -822,7 +829,7 @@ EOT;
 			exit();
 		}
 
-        $amount = $order["cost"];
+        $amount = $order["cost"] / 10;
 
         $client = new SoapClient('https://api.nextpay.org/gateway/verify.wsdl', array('encoding' => 'UTF-8'));
 
@@ -861,7 +868,7 @@ EOT;
 			$table_name = $wpdb->prefix . "pfd_transactions";
 			$wpdb->insert($table_name, $trans);
 			// download link
-			if(get_option("paypal_direct") == 1){
+			if(get_option("nextpay_direct") == 1){
 				$download_link = $product["file"];
 				$download_name = $product["name"];
 				$download_link = "<a href='$download_link'>$download_name</a>";
@@ -1038,22 +1045,35 @@ echo '<html>
 	
 				// construct order
 				$table_name = $wpdb->prefix . "pfd_orders";
-	
-				$url = 'https://nextpay.ir/payment/gateway-send';
-				$api = get_option('vip_nextpay_api');
-				$amount = $product["cost"];
-				$redirect = urlencode(get_option('siteurl') . "/?pfd_action=ipn");
-				$result = self::send($url,$api,$amount,$redirect);
-				if($result > 0 && is_numeric($result)){
-					$go = "https://nextpay.ir/payment/gateway-$result";
-					$wpdb->insert( $table_name, array('product_id' => $product_id, 'order_code' => $result, 'fulfilled' => 0, 'created_at' => time(), 'cost' => $product["cost"]), array( '%d', '%s', '%d', '%d', '%s') );
+
+				$client = new SoapClient('http://api.nextpay.org/gateway/token.wsdl', array('encoding' => 'UTF-8'));
+				$api_key = get_option('vip_nextpay_api');
+				$amount = $product["cost"] / 10;
+				$order_id = md5(uniqid(rand(), true));
+				$redirect = get_option('siteurl') . "/?pfd_action=ipn";
+
+				$result = $client->TokenGenerator(
+					array(
+						'api_key' 	=> $api_key,
+						'order_id'	=> $order_id,
+						'amount' 		=> $amount,
+						'callback_uri' 	=> $redirect
+					)
+				);
+
+				$result = $result->TokenGeneratorResult;
+
+
+				if(intval($result->code) == -1){
+					$go = "https://api.nextpay.org/gateway/payment/" . $result->trans_id;
+					$wpdb->insert( $table_name, array('product_id' => $product_id, 'order_code' => $order_id, 'fulfilled' => 0, 'created_at' => time(), 'cost' => $product["cost"]), array( '%d', '%s', '%d', '%d', '%s') );
 					header("Location: $go");
 				}else{
 					
 					$html ='<html><head>
 						<link media="all" rel="stylesheet" type="text/css" href="'.plugins_url('style.css',__FILE__).'"></head><body class="vipbody"><div class="mrbox2">';
 						$html .='<b>در برقراري ارتباط با درگاه پرداخت nextpay مشکلي بوجود آمده است<br>';
-						$html .='لطفا به مدیر اطلاع دهید<br>کد خطا : '.$result.'</b><br><br>';
+						$html .='لطفا به مدیر اطلاع دهید<br>کد خطا : '.$result->code.'</b><br><br>';
 						$html .='<a class="mrbtn_green" href="'.get_option('siteurl').'">بازگشت به صفحه اصلي</a>';
 						$html .='</div></body></html>';			
 						echo $html;
@@ -1065,7 +1085,7 @@ echo '<html>
 			}
 	}
     }
-	// make sure we have the paypal action listener available
+	// make sure we have the nextpay action listener available
 	public static function register_vars($vars) {
 		$vars[] = "pfd_action";
 		$vars[] = "checkout";
@@ -1450,20 +1470,43 @@ echo '<div class="wrap">
 		
 		echo "<br/><div align='center' dir='rtl' style='font-family:tahoma;font-size:12px;'><b>نتیجـــه تـــراکنـش</b></div><br />";
 		
-        $url = 'https://nextpay.ir/payment/gateway-result-second';
-        $api = get_option('vip_nextpay_api');
+
+
 		
         $trans_id = $_POST['trans_id'];
-        $id_get = $_POST['id_get'];
-        $result = self::get($url,$api,$trans_id,$id_get);
-		
-		$this_script = get_option('siteurl');
-		if ($result == 1) {
+		$order_id = $_POST['order_id'];
+
+
+		if (isset($trans_id) AND isset($order_id)){
 			// find with order id
 			global $wpdb;
-			
 			$order_name = $wpdb->prefix . "vip_orders";
-			$order = $wpdb->get_row($wpdb->prepare("SELECT * FROM $order_name WHERE order_code = $id_get AND fulfilled = 0",$_POST["trans_id"]) , ARRAY_A, 0);
+			$order = $wpdb->get_row($wpdb->prepare("SELECT * FROM $order_name WHERE order_code = '%s' AND fulfilled = 0",$order_id) , ARRAY_A, 0);
+			if(!$order){
+				exit();
+			}
+		}else{
+			exit();
+		}
+
+		$amount = $order["cost"] / 10;
+		$api_key = get_option('vip_nextpay_api');
+
+		$client = new SoapClient('https://api.nextpay.org/gateway/verify.wsdl', array('encoding' => 'UTF-8'));
+
+		$result = $client->PaymentVerification(
+			array(
+				'api_key' => $api_key,
+				'trans_id'  => $trans_id,
+				'amount'	 => $amount,
+				'order_id'	=> $order_id
+			)
+		);
+		$result = $result->PaymentVerificationResult;
+
+
+		if(intval($result->code) == 0){
+			// find with order id
 			
 			$account_name = $wpdb->prefix . "vip_accounts";
 			$account = $wpdb->get_row($wpdb->prepare("SELECT * FROM $account_name WHERE id = %d ",$order["idaccount"]) , ARRAY_A, 0);
@@ -1489,7 +1532,7 @@ echo '<div class="wrap">
 			// get email text
 			$emailtext = get_option('vip_message_email');
 			$emailtext = str_replace("[ACCOUNT_NAME]",$account["name"],$emailtext);
-			$emailtext = str_replace("[TRANSACTION_ID]",$_POST["trans_id"],$emailtext);
+			$emailtext = str_replace("[TRANSACTION_ID]",$trans_id, $emailtext);
 			// fantastic, now send them a message
 			$message = $emailtext;
 			echo "<div align='center' dir='rtl' style='font-family:tahoma;font-size:11px;border:1px dotted #c3c3c3; width:60%; line-height:20px;margin-left:20%'>تراکنش شما <font color='green'><b>مـوفق بود</b></font>.<br/><p align='right' style='margin-right:15px'>".nl2br($message)."</p><a href='",get_option('siteurl'),"'>بازگشت به صفحه اصلي</a><br/><br/></div><br>";
@@ -1505,26 +1548,6 @@ echo '<div class="wrap">
             echo "<div align='center' dir='rtl' style='font-family:tahoma;font-size:11px;border:1px dotted #c3c3c3; width:60%; line-height:20px;margin-left:20%'>تراکنش شما <font color='red'><b>نـاموفق بود</b></font>.<br/><p align='right' style='margin-right:15px'> ممکن است به یکی از دلایل زیر باشد:<br/>1- ممکن است ارتباط شما با دروازه پرداخت بانک برقرار نشده باشد<br/>2- ممکن است از انجام عملیات پرداخت منصرف شده باشید<br/>3- ممکن است سرعت اینترنت شما درحال حاضر کم باشد و قادر به باز کردن درگاه پرداخت بانک نباشید.<br/> لطفا به صفحه اصلی سایت بازگشته و مجددا خرید خود را انجام دهید.</p><a href='",get_option('siteurl'),"'>بازگشت به صفحه اصلي</a><br/><br/></div>";
         }
 	}
-    public static function send($url,$api,$amount,$redirect){
-        $ch = curl_init();
-        curl_setopt($ch,CURLOPT_URL,$url);
-        curl_setopt($ch,CURLOPT_POSTFIELDS,"api=$api&amount=$amount&redirect=$redirect");
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-        curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
-        $res = curl_exec($ch);
-        curl_close($ch);
-        return $res;
-    }
-    public static function get($url,$api,$trans_id,$id_get){
-        $ch = curl_init();
-        curl_setopt($ch,CURLOPT_URL,$url);
-        curl_setopt($ch,CURLOPT_POSTFIELDS,"api=$api&id_get=$id_get&trans_id=$trans_id");
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-        curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
-        $res = curl_exec($ch);
-        curl_close($ch);
-        return $res;
-    }
 	
 	
 	protected static function get_captcha() {
@@ -1676,7 +1699,7 @@ echo '<html>
 
                     $client = new SoapClient('http://api.nextpay.org/gateway/token.wsdl', array('encoding' => 'UTF-8'));
                     $api_key = get_option('vip_nextpay_api');
-                    $amount = $account["cost"];
+                    $amount = $account["cost"] / 10;
                     $order_id = md5(uniqid(rand(), true));
                     $redirect = get_option('siteurl') . "/?vip_action=ipnvip";
 
@@ -1754,7 +1777,7 @@ echo '<div id="vip_linkdownload_form" style="display:none;">
 				$products = $wpdb->get_results( "SELECT * FROM $table_name ORDER BY id ASC;" ,ARRAY_A);
 				if (count($products) == 0) 
 				{
-					echo 'محصولي وجود ندارد. <a href="'.get_option('siteurl').'/wp-admin/admin.php?page=paypal-file-download-products'.'">نوشته خود را ذخيره کنيد و سپس اينجا کليک نماييد.</a>';
+					echo 'محصولي وجود ندارد. <a href="'.get_option('siteurl').'/wp-admin/admin.php?page=nextpay-file-download-products'.'">نوشته خود را ذخيره کنيد و سپس اينجا کليک نماييد.</a>';
 				} 
 				else
 				{
